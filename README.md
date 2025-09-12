@@ -426,7 +426,7 @@ An example of one of the passage files is stored in:
 
 To test your program with this dataset, run:
 ```
-./knn 384 ./data/queries_emd.json ./data/passages1.json 2
+./main 384 ./data/queries_emd.json ./data/passages1.json 2
 ```
 
 This command runs KNN search in 384D to find the 2 nearest neighbors to the query point.

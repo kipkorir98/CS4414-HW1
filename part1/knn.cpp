@@ -37,7 +37,6 @@ Node* buildKD(std::vector<std::pair<Embedding_T,int>>& items, int depth) {
         node->right = nullptr;
         return node;
     }
-    return nullptr;
 
     std::sort(items.begin(), items.end(), 
         [](const std::pair<Embedding_T, int>& a, const std::pair<Embedding_T, int>& b) {
@@ -46,6 +45,7 @@ Node* buildKD(std::vector<std::pair<Embedding_T,int>>& items, int depth) {
             }
             return a.second < b.second;
         });
+    
 
     int medianIdx = (items.size() - 1) / 2;
     
@@ -55,7 +55,7 @@ Node* buildKD(std::vector<std::pair<Embedding_T,int>>& items, int depth) {
     
     std::vector<std::pair<Embedding_T, int>> leftItems(items.begin(), items.begin() + medianIdx);
     std::vector<std::pair<Embedding_T, int>> rightItems(items.begin() + medianIdx + 1, items.end());
-    
+
     node->left = buildKD(leftItems, depth + 1);
     node->right = buildKD(rightItems, depth + 1);
     
@@ -81,6 +81,9 @@ void knnSearch(Node *node,
     You should recursively traverse the tree and maintain a max-heap of the K closest points found so far.
     For now, this is a stub that does nothing.
     */
+    std::cout << "knnSearch called with node=" << (node ? "not null" : "null") 
+              << ", depth=" << depth << ", K=" << K << std::endl;
+
     if (node == nullptr) {
         return;
     }
@@ -88,48 +91,39 @@ void knnSearch(Node *node,
     float queryValue = Node::queryEmbedding;
     float nodeValue = node->embedding;
     
+    std::cout << "Query embedding: " << Node::queryEmbedding << std::endl;
+
     Node* nearSubtree;
     Node* farSubtree;
 
     if (queryValue < nodeValue) {
-        nearSubtree = node->left;   // Query is less, so left is nearer
-        farSubtree = node->right;   // Right is farther
+        nearSubtree = node->left;   
+        farSubtree = node->right;
     } else {
-        nearSubtree = node->right;  // Query is greater/equal, so right is nearer  
-        farSubtree = node->left;    // Left is farther
+        nearSubtree = node->right;
+        farSubtree = node->left; 
     }
 
     knnSearch(nearSubtree, depth + 1, K, heap); 
 
      float distance = std::abs(queryValue - nodeValue);
     
-    // Add current node to heap if it should be in top-K
-    if (heap.size() < K) {
-        // Heap not full yet, add this node
+    if (static_cast<int>(heap.size()) < K) {
         heap.push(std::make_pair(distance, node->idx));
     } else if (distance < heap.top().first) {
-        // Heap is full, but this node is closer than the farthest in heap
-        heap.pop();  // Remove the farthest
-        heap.push(std::make_pair(distance, node->idx));  // Add this closer node
+        heap.pop();
+        heap.push(std::make_pair(distance, node->idx));
     }
-    
-    // Step 3: Conditionally search the far subtree
-    // Only search if we need more points OR if the hyperplane might contain closer points
     
     bool shouldSearchFar = false;
     
-    if (heap.size() < K) {
-        // We don't have K points yet, must search far subtree
+    if (static_cast<int>(heap.size()) < K) {
         shouldSearchFar = true;
     } else {
-        // We have K points. Check if far subtree might contain closer points.
-        // Distance to splitting hyperplane is the distance along the splitting axis
         float hyperplaneDistance = std::abs(queryValue - nodeValue);
         float farthestDistance = heap.top().first;  // Max-heap, so top is farthest
         
         if (hyperplaneDistance < farthestDistance) {
-            // The hyperplane is closer than our current farthest neighbor,
-            // so there might be closer points in the far subtree
             shouldSearchFar = true;
         }
     }

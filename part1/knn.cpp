@@ -47,14 +47,17 @@ Node* buildKD(std::vector<std::pair<Embedding_T,int>>& items, int depth) {
         });
     
 
-    int medianIdx = (items.size() - 1) / 2;
+    int medianIndex = (items.size() - 1) / 2;
     
     Node* node = new Node();
-    node->embedding = items[medianIdx].first;
-    node->idx = items[medianIdx].second;
+    node->embedding = items[medianIndex].first;
+    node->idx = items[medianIndex].second;
     
-    std::vector<std::pair<Embedding_T, int>> leftItems(items.begin(), items.begin() + medianIdx);
-    std::vector<std::pair<Embedding_T, int>> rightItems(items.begin() + medianIdx + 1, items.end());
+    std::vector<std::pair<Embedding_T, int>> leftItems;
+    std::vector<std::pair<Embedding_T, int>> rightItems;
+
+    leftItems.assign(items.begin(), items.begin() + medianIndex);
+    rightItems.assign(items.begin() + medianIndex + 1, items.end());
 
     node->left = buildKD(leftItems, depth + 1);
     node->right = buildKD(rightItems, depth + 1);
@@ -81,22 +84,18 @@ void knnSearch(Node *node,
     You should recursively traverse the tree and maintain a max-heap of the K closest points found so far.
     For now, this is a stub that does nothing.
     */
-    std::cout << "knnSearch called with node=" << (node ? "not null" : "null") 
-              << ", depth=" << depth << ", K=" << K << std::endl;
 
     if (node == nullptr) {
         return;
     }
     
     float queryValue = Node::queryEmbedding;
-    float nodeValue = node->embedding;
-    
-    std::cout << "Query embedding: " << Node::queryEmbedding << std::endl;
+    float currNodeValue = node->embedding;
 
     Node* nearSubtree;
     Node* farSubtree;
 
-    if (queryValue < nodeValue) {
+    if (queryValue < currNodeValue) {
         nearSubtree = node->left;   
         farSubtree = node->right;
     } else {
@@ -106,7 +105,7 @@ void knnSearch(Node *node,
 
     knnSearch(nearSubtree, depth + 1, K, heap); 
 
-     float distance = std::abs(queryValue - nodeValue);
+    float distance = std::abs(queryValue - currNodeValue);
     
     if (static_cast<int>(heap.size()) < K) {
         heap.push(std::make_pair(distance, node->idx));
@@ -117,14 +116,16 @@ void knnSearch(Node *node,
     
     bool shouldSearchFar = false;
     
-    if (static_cast<int>(heap.size()) < K) {
-        shouldSearchFar = true;
+    int currentHeapSize = static_cast<int>(heap.size());
+    
+    if (currentHeapSize < K) {
+        heap.push(std::make_pair(distance, node->idx));
     } else {
-        float hyperplaneDistance = std::abs(queryValue - nodeValue);
-        float farthestDistance = heap.top().first;  // Max-heap, so top is farthest
+        float worstDistanceSoFar = heap.top().first;
         
-        if (hyperplaneDistance < farthestDistance) {
-            shouldSearchFar = true;
+        if (distance < worstDistanceSoFar) {
+            heap.pop(); 
+            heap.push(std::make_pair(distance, node->idx));
         }
     }
     

@@ -107,15 +107,6 @@ void knnSearch(Node *node,
 
     float distance = std::abs(queryValue - currNodeValue);
     
-    if (static_cast<int>(heap.size()) < K) {
-        heap.push(std::make_pair(distance, node->idx));
-    } else if (distance < heap.top().first) {
-        heap.pop();
-        heap.push(std::make_pair(distance, node->idx));
-    }
-    
-    bool shouldSearchFar = false;
-    
     int currentHeapSize = static_cast<int>(heap.size());
     
     if (currentHeapSize < K) {
@@ -124,8 +115,21 @@ void knnSearch(Node *node,
         float worstDistanceSoFar = heap.top().first;
         
         if (distance < worstDistanceSoFar) {
-            heap.pop(); 
+            heap.pop();
             heap.push(std::make_pair(distance, node->idx));
+        }
+    }
+    
+    bool shouldSearchFar = false;
+    
+    if (static_cast<int>(heap.size()) < K) {
+        shouldSearchFar = true;
+    } else {
+        float distanceToSplit = std::abs(queryValue - currNodeValue);
+        float farthestDistance = heap.top().first;
+        
+        if (distanceToSplit < farthestDistance) {
+            shouldSearchFar = true;
         }
     }
     

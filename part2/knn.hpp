@@ -117,22 +117,10 @@ Node<T>* buildKD(std::vector<std::pair<T,int>>& items, int depth = 0)
         [axis](const std::pair<T, int>& a, const std::pair<T, int>& b) {
             float coord_a = getCoordinate(a.first, axis);
             float coord_b = getCoordinate(b.first, axis);
-
-            if (coord_a != coord_b) {
-                return coord_a < coord_b;
-            }
-
-            for (size_t i = 1; i < Embedding_T<T>::Dim(); ++i) {
-                size_t next_axis = (axis + i) % Embedding_T<T>::Dim();
-                float next_a = getCoordinate(a.first, next_axis);
-                float next_b = getCoordinate(b.first, next_axis);
-                
-                if (next_a != next_b) {
-                    return next_a < next_b;
-                }
-            }
             
-            return a.second < b.second;
+            if (coord_a < coord_b) return true;
+            if (coord_a > coord_b) return false;
+            return a.second < b.second; 
         });
     
     int medianIdx = (items.size() - 1) / 2;

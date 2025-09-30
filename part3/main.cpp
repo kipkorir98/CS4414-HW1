@@ -76,6 +76,75 @@ int main(int argc, char* argv[]) {
             - Get the index of each found neighbour  using alglib::kdtreequeryresultstags
             - Get the distance between each found neighbour and the query embedding using alglib::kdtreequeryresultsdists
         */
+        size_t N = passages_json.size();
+
+        std::vector<double> buffer;
+        buffer.reserve(N * D);
+
+        alglib::integer_1d_array tags;
+        tags.setlength(N);
+
+        // Fill buffer + tags
+        for (size_t i = 0; i < N; ++i) {
+            auto &p = passages_json[i];
+            int id = p["id"].get<int>();
+            tags[i] = id;
+
+            auto &embedding = p["embedding"];
+            for (size_t d = 0; d < D; ++d) {
+                buffer.push_back(embedding[d].get<double>());
+            }
+        }
+
+        alglib::real_2d_array passages;
+        passages.setcontent(N, D, buffer.data());
+        
+        auto buildtree_start = std::chrono::high_resolution_clock::now();
+        alglib::kdtree tree;
+        alglib::kdtreebuildtagged(passages, tags, (int)N, (int)D, 0, 2, tree);
+        auto buildtree_end = std::chrono::high_resolution_clock::now();
+
+        auto query_start = std::chrono::high_resolution_clock::now();
+        alglib::ae_int_t count = alglib::kdtreequeryaknn(tree, query, k, eps);
+        auto query_end = std::chrono::high_resolution_clock::now();
+        
+        alglib::integer_1d_array idx;
+        idx.setlength(count);
+        alglib::kdtreequeryresultstags(tree, idx);
+
+        alglib::real_1d_array dist;
+        dist.setlength(count);
+        alglib::kdtreequeryresultsdistances(tree, dist);
+
+        auto program_end = std::chrono::high_resolution_clock::now();
+
+        // ===== OUTPUT SECTION (same style as knn.hpp) =====
+        std::cout << "query:\n";
+        std::cout << "  text:    " << query_obj["text"] << "\n\n";
+
+        for (int i = 0; i < count; ++i) {
+            int neighbor_id = idx[i];
+            double neighbor_dist = std::sqrt(dist[i]);
+            auto &elem = dict[neighbor_id];
+
+            std::cout << "Neighbor " << (i + 1) << ":\n";
+            std::cout << "  id:      " << neighbor_id
+                      << ", dist = " << neighbor_dist << "\n";
+            std::cout << "  text:    " << elem["text"] << "\n\n";
+        }
+
+        // ===== PERFORMANCE METRICS =====
+        std::chrono::duration<double, std::milli> processing_duration = buildtree_start - processing_start;
+        std::chrono::duration<double, std::milli> buildtree_duration = buildtree_end - buildtree_start;
+        std::chrono::duration<double, std::milli> query_duration = query_end - query_start;
+        std::chrono::duration<double, std::milli> program_duration = program_end - program_start;
+
+        std::cout << "#### Performance Metrics ####\n";
+        std::cout << "Elapsed time: " << program_duration.count() << " ms\n";
+        std::cout << "Processing time: " << processing_duration.count() << " ms\n";
+        std::cout << "KD-tree build time: " << buildtree_duration.count() << " ms\n";
+        std::cout << "K-NN query time: " << query_duration.count() << " ms\n";
+
         
     }
     catch(alglib::ap_error &e) {
